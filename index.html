@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeBox Pro</title>
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background-color: #f0f2f5; color: #333; margin: 0; }
+        .container { max-width: 550px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #2c3e50; margin-top: 0; }
+        
+        /* Form Elements */
+        input[type="password"] { width: 100%; padding: 12px; margin: 10px 0 20px 0; border: 2px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        input[type="password"]:focus { border-color: #3498db; outline: none; }
+        button { width: 100%; padding: 12px; margin: 8px 0; border: none; border-radius: 6px; color: white; font-weight: bold; font-size: 15px; cursor: pointer; transition: 0.2s; }
+        button:disabled { background-color: #bdc3c7 !important; cursor: not-allowed; }
+        .btn-red { background-color: #e74c3c; } .btn-red:hover { background-color: #c0392b; }
+        .btn-green { background-color: #2ecc71; } .btn-green:hover { background-color: #27ae60; }
+        
+        /* Tabs System */
+        .tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #eee; }
+        .tab-btn { flex: 1; background: none; color: #7f8c8d; padding: 10px; margin: 0; border-radius: 0; font-size: 16px; border-bottom: 3px solid transparent; }
+        .tab-btn.active { color: #2c3e50; border-bottom: 3px solid #3498db; }
+        .tab-content { display: none; animation: fadeIn 0.3s; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Tree View (Mobile Mode) */
+        .tree-container { max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px; padding: 10px; background: #fafafa; margin-top: 15px; }
+        details { margin: 5px 0 5px 15px; }
+        summary { cursor: pointer; font-weight: bold; color: #2c3e50; padding: 5px; border-radius: 4px; outline: none; }
+        summary:hover { background: #eee; }
+        .file-row { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; margin-left: 20px; background: white; border-radius: 4px; margin-bottom: 2px; }
+        .file-name { font-size: 0.9em; word-break: break-all; width: 60%; }
+        .file-actions { display: flex; gap: 5px; }
+        .file-actions button { width: auto; padding: 6px 12px; margin: 0; font-size: 0.8em; }
+
+        /* Messaging System */
+        #messageBox { padding: 12px; border-radius: 6px; margin-top: 15px; font-weight: bold; text-align: center; display: none; }
+        .msg-error { background: #fadbd8; color: #c0392b; border: 1px solid #e74c3c; }
+        .msg-success { background: #d5f5e3; color: #27ae60; border: 1px solid #2ecc71; }
+        .msg-info { background: #ebf5fb; color: #2980b9; border: 1px solid #3498db; }
+
+        /* Full Screen UI Blocker & Progress */
+        #uiBlocker { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; display: none; }
+        #uiBlocker.active { display: flex; }
+        .progress-box { background: white; color: #333; padding: 30px; border-radius: 10px; width: 80%; max-width: 400px; text-align: center; }
+        progress { width: 100%; height: 25px; margin: 15px 0; }
+        
+        #previewArea { margin-top: 20px; text-align: center; }
+        img, video { max-width: 100%; border-radius: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+<div id="uiBlocker">
+    <div class="progress-box">
+        <h3 id="progressTitle" style="margin-top:0;">Processing...</h3>
+        <progress id="progressBar" value="0" max="100"></progress>
+        <div id="progressText" style="font-weight: bold; font-size: 1.1em; color: #2980b9;">0 / 0 files</div>
+    </div>
+</div>
+
+<div class="container">
+    <h2>SafeBox Pro V8</h2>
+    
+    <input type="password" id="password" placeholder="Enter Master Password">
+    
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('desktop')" id="tabBtnDesktop">Desktop Mode</button>
+        <button class="tab-btn" onclick="switchTab('mobile')" id="tabBtnMobile">Mobile Mode</button>
+    </div>
+
+    <div id="tab-desktop" class="tab-content active">
+        <p style="font-size: 0.9em; color: #666; margin-bottom: 15px; text-align: center;">Advanced File System API. Replaces files directly in the folder.</p>
+        <button class="btn-red" onclick="processDesktopFolder('encrypt')">Encrypt Entire Folder</button>
+        <button class="btn-green" onclick="processDesktopFolder('decrypt')">Decrypt Entire Folder</button>
+    </div>
+
+    <div id="tab-mobile" class="tab-content">
+        <p style="font-size: 0.9em; color: #666; margin-bottom: 15px; text-align: center;">Select a folder. Files will be downloaded to your Downloads folder.</p>
+        
+        <input type="file" id="batchFileInput" multiple webkitdirectory style="width: 100%; margin-bottom: 10px; padding: 10px; border: 1px dashed #ccc; border-radius: 5px;">
+        
+        <div id="treeContainer" class="tree-container" style="display: none;"></div>
+    </div>
+
+    <div id="messageBox"></div>
+    <div id="previewArea"></div>
+</div>
+
+<script>
+    // --- APP INITIALIZATION & TAB LOGIC ---
+    const hasDesktopAPI = ('showDirectoryPicker' in window);
+    
+    if (!hasDesktopAPI) {
+        document.getElementById('tabBtnDesktop').disabled = true;
+        document.getElementById('tabBtnDesktop').innerText = "Desktop (Not Supported)";
+        switchTab('mobile'); // Force mobile tab if desktop API missing
+    }
+
+    function switchTab(tabName) {
+        if (!hasDesktopAPI && tabName === 'desktop') return;
+        
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        document.getElementById(`tabBtn${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+        document.getElementById('previewArea').innerHTML = '';
+        hideMessage();
+    }
+
+    // --- UI MESSAGING & BLOCKING ---
+    function showMessage(text, type) {
+        const box = document.getElementById('messageBox');
+        box.className = ''; 
+        box.classList.add('msg-' + type);
+        box.innerText = text;
+        box.style.display = 'block';
+    }
+    function hideMessage() { document.getElementById('messageBox').style.display = 'none'; }
+    
+    function setBlocker(active, title = "Processing...", current = 0, total = 0) {
+        const blocker = document.getElementById('uiBlocker');
+        if (active) {
+            blocker.classList.add('active');
+            document.getElementById('progressTitle').innerText = title;
+            document.getElementById('progressBar').max = total;
+            document.getElementById('progressBar').value = current;
+            document.getElementById('progressText').innerText = `${current} / ${total} files`;
+        } else {
+            blocker.classList.remove('active');
+        }
+    }
+    function updateProgress(current, total) {
+        document.getElementById('progressBar').value = current;
+        document.getElementById('progressText').innerText = `${current} / ${total} files`;
+    }
+
+    // --- CRYPTO ENGINE ---
+    async function getKeyMaterial(password) {
+        const enc = new TextEncoder();
+        return window.crypto.subtle.importKey("raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveBits", "deriveKey"]);
+    }
+
+    async function getKey(keyMaterial, salt) {
+        return window.crypto.subtle.deriveKey(
+            { name: "PBKDF2", salt: salt, iterations: 50000, hash: "SHA-1" },
+            keyMaterial, { name: "AES-CBC", length: 256 }, false, ["encrypt", "decrypt"]
+        );
+    }
+
+    // --- MOBILE TAB: TREE DIRECTORY BUILDER ---
+    document.getElementById('batchFileInput').addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+        const container = document.getElementById('treeContainer');
+        hideMessage();
+        
+        if (files.length === 0) { container.style.display = 'none'; return; }
+
+        // 1. Build Data Structure
+        const fileTree = {};
+        files.forEach(file => {
+            const pathParts = (file.webkitRelativePath || file.name).split('/');
+            let current = fileTree;
+            for (let i = 0; i < pathParts.length - 1; i++) {
+                if (!current[pathParts[i]]) current[pathParts[i]] = {};
+                current = current[pathParts[i]];
+            }
+            current[pathParts[pathParts.length - 1]] = file; // Leaf is the File object
+        });
+
+        // 2. Render HTML
+        container.innerHTML = '';
+        container.appendChild(buildTreeHTML(fileTree, "Selected Folder"));
+        container.style.display = 'block';
+        showMessage(`Loaded ${files.length} files.`, 'info');
+    });
+
+    function buildTreeHTML(node, folderName) {
+        const details = document.createElement('details');
+        details.open = true; // Auto-open folders by default
+        const summary = document.createElement('summary');
+        summary.innerText = "📁 " + folderName;
+        details.appendChild(summary);
+
+        for (const key in node) {
+            if (node[key] instanceof File) {
+                // It's a file
+                const file = node[key];
+                const isEnc = file.name.endsWith('.safe');
+                
+                const row = document.createElement('div');
+                row.className = 'file-row';
+                row.innerHTML = `<div class="file-name">📄 ${file.name}</div>`;
+                
+                const actionDiv = document.createElement('div');
+                actionDiv.className = 'file-actions';
+                
+                const btn = document.createElement('button');
+                btn.className = isEnc ? 'btn-green' : 'btn-red';
+                btn.innerText = isEnc ? 'Decrypt & View' : 'Encrypt & Save';
+                btn.onclick = () => executeCryptoOnFile(file, isEnc ? 'decrypt' : 'encrypt');
+                
+                actionDiv.appendChild(btn);
+                row.appendChild(actionDiv);
+                details.appendChild(row);
+            } else {
+                // It's a subfolder
+                details.appendChild(buildTreeHTML(node[key], key));
+            }
+        }
+        return details;
+    }
+
+    // --- MOBILE TAB: INDIVIDUAL FILE EXECUTION ---
+    async function executeCryptoOnFile(file, mode) {
+        const password = document.getElementById('password').value;
+        const preview = document.getElementById('previewArea');
+        if (!password) return showMessage("Please enter Master Password.", "error");
+
+        setBlocker(true, mode === 'encrypt' ? "Encrypting..." : "Decrypting...", 0, 1);
+        preview.innerHTML = ""; 
+
+        try {
+            const fileBuffer = await file.arrayBuffer();
+            const keyMaterial = await getKeyMaterial(password);
+
+            if (mode === 'encrypt') {
+                const salt = window.crypto.getRandomValues(new Uint8Array(16));
+                const iv = window.crypto.getRandomValues(new Uint8Array(16));
+                const key = await getKey(keyMaterial, salt);
+                const encryptedContent = await window.crypto.subtle.encrypt({ name: "AES-CBC", iv: iv }, key, fileBuffer);
+
+                const finalPackage = new Uint8Array(salt.length + iv.length + encryptedContent.byteLength);
+                finalPackage.set(salt, 0); finalPackage.set(iv, 16); finalPackage.set(new Uint8Array(encryptedContent), 32);
+
+                triggerDownload(new Blob([finalPackage], { type: "application/octet-stream" }), file.name + ".safe");
+                showMessage("Success: Encrypted file downloaded.", "success");
+            } 
+            else if (mode === 'decrypt') {
+                const dataView = new Uint8Array(fileBuffer);
+                const salt = dataView.slice(0, 16);
+                const iv = dataView.slice(16, 32);
+                
+                const key = await getKey(keyMaterial, salt);
+                const decryptedContent = await window.crypto.subtle.decrypt({ name: "AES-CBC", iv: iv }, key, dataView.slice(32));
+
+                const originalName = file.name.replace('.safe', '');
+                let mimeType = getMimeType(originalName);
+                displaySecurely(URL.createObjectURL(new Blob([decryptedContent], { type: mimeType })), mimeType);
+                showMessage("Success: Decrypted securely in RAM.", "success");
+            }
+        } catch (e) {
+            showMessage("Error: Wrong password or corrupted file.", "error");
+        } finally {
+            setBlocker(false);
+        }
+    }
+
+    // --- DESKTOP TAB: BULK FOLDER PROCESSING ---
+    async function processDesktopFolder(mode) {
+        const password = document.getElementById('password').value;
+        if (!password) return showMessage("Please enter Master Password.", "error");
+
+        try {
+            const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            setBlocker(true, "Scanning folders...", 0, 0);
+
+            const targetFiles = await getTargetFiles(dirHandle, mode === 'encrypt');
+            if (targetFiles.length === 0) {
+                setBlocker(false);
+                return showMessage("No applicable files found to process.", "info");
+            }
+
+            const keyMaterial = await getKeyMaterial(password);
+            let processed = 0; let errorCount = 0;
+            
+            document.getElementById('progressTitle').innerText = mode === 'encrypt' ? "Encrypting Folder..." : "Decrypting Folder...";
+            document.getElementById('progressBar').max = targetFiles.length;
+
+            for (const fileObj of targetFiles) {
+                try {
+                    const file = await fileObj.handle.getFile();
+                    const fileBuffer = await file.arrayBuffer();
+                    let outData, newFileName;
+
+                    if (mode === 'encrypt') {
+                        const salt = window.crypto.getRandomValues(new Uint8Array(16));
+                        const iv = window.crypto.getRandomValues(new Uint8Array(16));
+                        const key = await getKey(keyMaterial, salt);
+                        const enc = await window.crypto.subtle.encrypt({ name: "AES-CBC", iv: iv }, key, fileBuffer);
+                        outData = new Uint8Array(32 + enc.byteLength);
+                        outData.set(salt, 0); outData.set(iv, 16); outData.set(new Uint8Array(enc), 32);
+                        newFileName = fileObj.handle.name + ".safe";
+                    } else {
+                        const dataView = new Uint8Array(fileBuffer);
+                        const key = await getKey(keyMaterial, dataView.slice(0, 16));
+                        outData = await window.crypto.subtle.decrypt({ name: "AES-CBC", iv: dataView.slice(16, 32) }, key, dataView.slice(32));
+                        newFileName = fileObj.handle.name.replace('.safe', '');
+                    }
+
+                    const newFileHandle = await fileObj.parent.getFileHandle(newFileName, { create: true });
+                    const writable = await newFileHandle.createWritable();
+                    await writable.write(outData); await writable.close();
+                    await fileObj.parent.removeEntry(fileObj.handle.name);
+                    
+                } catch (e) { errorCount++; }
+                
+                processed++;
+                updateProgress(processed, targetFiles.length);
+            }
+            
+            setBlocker(false);
+            if (errorCount > 0) showMessage(`Finished, but ${errorCount} files failed (Wrong Password?).`, "error");
+            else showMessage("Folder processed successfully!", "success");
+            
+        } catch (e) { 
+            setBlocker(false);
+            showMessage("Operation cancelled or access denied.", "info"); 
+        }
+    }
+
+    async function getTargetFiles(dirHandle, isEncrypting) {
+        let files = [];
+        for await (const entry of dirHandle.values()) {
+            if (entry.kind === 'file') {
+                if (isEncrypting && !entry.name.endsWith('.safe')) files.push({ handle: entry, parent: dirHandle });
+                if (!isEncrypting && entry.name.endsWith('.safe')) files.push({ handle: entry, parent: dirHandle });
+            } else if (entry.kind === 'directory') {
+                files = files.concat(await getTargetFiles(entry, isEncrypting));
+            }
+        }
+        return files;
+    }
+
+    // --- UTILITIES ---
+    function triggerDownload(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+        URL.revokeObjectURL(url);
+    }
+    function getMimeType(filename) {
+        const ext = filename.split('.').pop().toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return `image/${ext}`;
+        if (['mp4', 'webm', 'ogg'].includes(ext)) return `video/${ext}`;
+        if (['pdf'].includes(ext)) return 'application/pdf';
+        return 'application/octet-stream';
+    }
+    function displaySecurely(url, mimeType) {
+        const preview = document.getElementById('previewArea');
+        if (mimeType.startsWith('image/')) preview.innerHTML = `<img src="${url}" alt="Decrypted">`;
+        else if (mimeType.startsWith('video/')) preview.innerHTML = `<video controls src="${url}"></video>`;
+        else preview.innerHTML = `<a href="${url}" target="_blank" style="display:inline-block; padding:10px 20px; background:#3498db; color:white; text-decoration:none; border-radius:5px;">Open Decrypted File</a>`;
+    }
+</script>
+</body>
+</html>
