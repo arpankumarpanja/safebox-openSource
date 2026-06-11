@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeBox Pro V2.1</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; color: #333; margin: 0; padding: 15px 0; display: flex; justify-content: center; min-height: 100vh; box-sizing: border-box; }
+        .container { width: 95vw; height: 95vh; box-sizing: border-box; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+        
+        h2 { text-align: center; color: #2c3e50; margin: 0 0 10px 0; font-size: 1.4em; }
+        
+        /* Collapsible Settings Panel */
+        .settings-panel { margin-bottom: 10px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 8px; padding: 10px 15px; flex-shrink: 0; }
+        .settings-panel summary { font-size: 0.95em; font-weight: bold; color: #2c3e50; padding: 0; outline: none; cursor: pointer; user-select: none; }
+        .settings-panel[open] summary { border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+        
+        .pwd-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .pwd-wrapper { position: relative; display: flex; align-items: center; }
+        .pwd-wrapper input { width: 100%; padding: 10px 40px 10px 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        .pwd-toggle { position: absolute; right: 10px; cursor: pointer; font-size: 18px; user-select: none; opacity: 0.6; transition: 0.2s; }
+        .pwd-toggle:hover { opacity: 1; }
+        
+        .opt-group { display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 0.9em; color: #2c3e50; }
+        .opt-group input[type="checkbox"] { transform: scale(1.2); cursor: pointer; }
+
+        button { border: none; border-radius: 6px; color: white; font-weight: bold; font-size: 14px; cursor: pointer; transition: 0.2s; }
+        button:disabled { background-color: #bdc3c7 !important; cursor: not-allowed; }
+        .btn-red { background-color: #e74c3c; } .btn-red:hover { background-color: #c0392b; }
+        .btn-green { background-color: #2ecc71; } .btn-green:hover { background-color: #27ae60; }
+        .btn-dark { background-color: #34495e; } .btn-dark:hover { background-color: #2c3e50; }
+        
+        /* Tabs System */
+        .tabs { display: flex; margin-bottom: 10px; border-bottom: 2px solid #eee; flex-shrink: 0; }
+        .tab-btn { flex: 1; background: none; color: #7f8c8d; padding: 8px; margin: 0; border-radius: 0; font-size: 14px; border-bottom: 3px solid transparent; font-weight: bold; cursor: pointer; }
+        .tab-btn.active { color: #2c3e50; border-bottom: 3px solid #3498db; }
+        .tab-content { display: none; flex-direction: column; flex-grow: 1; overflow: hidden; }
+        .tab-content.active { display: flex; }
+
+        /* Unified Compact Tree Controls */
+        .tree-controls { display: flex; gap: 8px; margin-bottom: 10px; flex-shrink: 0; align-items: center; }
+        .tree-controls input[type="text"] { flex: 1; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px; }
+        .tree-controls select { padding: 10px; border-radius: 6px; border: 1px solid #ccc; cursor: pointer; background: white; font-size: 14px; }
+        .icon-btn { padding: 10px 15px; margin: 0; font-size: 14px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; white-space: nowrap; }
+
+        /* Tree Directory Layout */
+        .tree-scroll-area { flex-grow: 1; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px; padding: 10px; background: #fafafa; margin-bottom: 10px; }
+        details { margin: 2px 0 2px 15px; }
+        summary { cursor: pointer; font-weight: bold; color: #2c3e50; padding: 4px; border-radius: 4px; outline: none; display: inline-flex; align-items: center; gap: 6px; font-size: 0.85em; }
+        summary:hover { background: #eee; }
+        summary input[type="checkbox"], .file-row input[type="checkbox"] { transform: scale(1.1); cursor: pointer; }
+        
+        .file-row { display: flex; align-items: center; padding: 4px 8px; border-bottom: 1px solid #eee; margin-left: 20px; background: white; border-radius: 4px; margin-bottom: 2px; gap: 8px; cursor: pointer; transition: background 0.2s; }
+        .file-row:hover { background: #f1f7fe; }
+        .file-row.enc-row { background: #fdf2e9; } 
+        .file-clickable-zone { display: flex; align-items: center; gap: 8px; flex-grow: 1; user-select: none; overflow: hidden; }
+        .file-name { font-size: 0.85em; color: #34495e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-size { color: #95a5a6; font-size: 0.75em; margin-left: auto; flex-shrink: 0; font-family: monospace; }
+
+        /* Floating Bulk Actions Panel */
+        .bulkActionBar { display: none; position: fixed; top: 20px; right: 20px; z-index: 10000; background: rgba(44, 62, 80, 0.95); backdrop-filter: blur(4px); color: white; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.3); flex-direction: column; min-width: 180px; transition: 0.3s ease; overflow: hidden; }
+        .bulkActionBar.active { display: flex; animation: slideIn 0.3s ease; }
+        .bulkActionBar.collapsed { min-width: 0; width: 45px; height: 45px; border-radius: 50%; justify-content: center; align-items: center; padding: 0; }
+        .bulkActionBar.collapsed .bulk-text, .bulkActionBar.collapsed .bulk-buttons { display: none; }
+        .bulkActionBar.collapsed .collapse-btn { font-size: 22px; width: 100%; height: 100%; justify-content: center; }
+        .bulk-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.1); width: 100%; box-sizing: border-box; }
+        .bulkActionBar.collapsed .bulk-header { padding: 0; border: none; justify-content: center; height: 100%; }
+        .bulk-text { font-weight: bold; font-size: 0.9em; }
+        .collapse-btn { background: none; border: none; color: white; cursor: pointer; font-size: 1.2em; padding: 0; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .bulk-buttons { display: flex; gap: 8px; flex-direction: column; padding: 12px 15px; }
+        .bulk-buttons button { margin: 0; padding: 10px; font-size: 0.9em; width: 100%; }
+        @keyframes slideIn { from { transform: translateX(50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Helpers */
+        .toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 10001; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+        .toast { padding: 12px 25px; border-radius: 8px; font-weight: bold; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideDown 0.3s ease; pointer-events: auto; }
+        .msg-error { background: #fadbd8; color: #c0392b; border: 1px solid #e74c3c; }
+        .msg-success { background: #d5f5e3; color: #27ae60; border: 1px solid #2ecc71; }
+        .msg-info { background: #ebf5fb; color: #2980b9; border: 1px solid #3498db; }
+        @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        
+        #uiBlocker { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; display: none; }
+        #uiBlocker.active { display: flex; }
+        .progress-box { background: white; color: #333; padding: 30px; border-radius: 10px; width: 80%; max-width: 400px; text-align: center; }
+        progress { width: 100%; height: 25px; margin: 15px 0; }
+        
+        #previewModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; display: none; justify-content: center; align-items: center; }
+        #previewModal.active { display: flex; }
+        .modal-content { max-width: 90%; max-height: 85%; text-align: center; position: relative; }
+        .modal-content img, .modal-content video { max-width: 100%; max-height: 80vh; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .close-modal { position: absolute; top: -40px; right: 0; color: white; font-size: 35px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="toastContainer" class="toast-container"></div>
+<div id="uiBlocker">
+    <div class="progress-box">
+        <h3 id="progressTitle" style="margin-top:0;">Processing...</h3>
+        <progress id="progressBar" value="0" max="100"></progress>
+        <div id="progressText" style="font-weight: bold; font-size: 1.1em; color: #2980b9;">0 / 0 files</div>
+    </div>
+</div>
+<div id="previewModal" onclick="closeModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <span class="close-modal" onclick="closeModal()">×</span>
+        <div id="modalBody"></div>
+    </div>
+</div>
+
+<div class="container">
+    <h2>SafeBox Pro V2.1</h2>
+    
+    <details class="settings-panel">
+        <summary>⚙️ Security & Passwords</summary>
+        <div class="pwd-group">
+            <div class="pwd-wrapper">
+                <input type="password" id="password" placeholder="Master Password">
+                <span class="pwd-toggle" onclick="toggleVisibility('password', this)" title="Show/Hide">👁️</span>
+            </div>
+            <div class="pwd-wrapper">
+                <input type="password" id="confirmPassword" placeholder="Confirm Password (For Encryption Only)">
+                <span class="pwd-toggle" onclick="toggleVisibility('confirmPassword', this)" title="Show/Hide">👁️</span>
+            </div>
+        </div>
+        <label class="opt-group">
+            <input type="checkbox" id="cbEncryptName"> Encrypt File Names (.esafe format)
+        </label>
+    </details>
+    
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('desktop')" id="tabBtnDesktop">Desktop Mode (In-Place)</button>
+        <button class="tab-btn" onclick="switchTab('mobile')" id="tabBtnMobile">Mobile Mode (Download)</button>
+    </div>
+
+    <div id="tab-desktop" class="tab-content active">
+        <div class="tree-controls" id="desktopTreeControls">
+            <button class="btn-dark icon-btn" onclick="loadDesktopWorkspace()" title="Open Workspace Folder">📂 Open</button>
+            <input type="text" id="desktopSearch" placeholder="🔍 Search files..." onkeyup="filterTree(this.value, 'desktop')">
+            <select id="desktopSort" onchange="reRenderDesktopTree()">
+                <option value="az">A-Z</option>
+                <option value="za">Z-A</option>
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="largest">Largest First</option>
+                <option value="smallest">Smallest First</option>
+            </select>
+        </div>
+
+        <div id="desktopTreeContainer" class="tree-scroll-area">
+            <div style="text-align: center; color: #7f8c8d; margin-top: 20px;">Click "📂 Open" to load a workspace.</div>
+        </div>
+
+        <div id="desktopBulkBar" class="bulkActionBar">
+            <div class="bulk-header">
+                <span id="desktopBulkCount" class="bulk-text">0 flagged</span>
+                <button class="collapse-btn" onclick="toggleBulkBar('desktopBulkBar')">🔽</button>
+            </div>
+            <div class="bulk-buttons">
+                <button class="btn-red" onclick="executeDesktopBulk('encrypt')">Encrypt In-Place</button>
+                <button class="btn-green" onclick="executeDesktopBulk('decrypt')">Decrypt In-Place</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tab-mobile" class="tab-content">
+        <div class="tree-controls" id="mobileTreeControls">
+            <label class="btn-dark icon-btn" title="Select Folder to Read" style="cursor: pointer;">
+                📂 Open
+                <input type="file" id="batchFileInput" multiple webkitdirectory style="display:none;">
+            </label>
+            <input type="text" id="mobileSearch" placeholder="🔍 Search files..." onkeyup="filterTree(this.value, 'mobile')">
+            <select id="mobileSort" onchange="reRenderMobileTree()">
+                <option value="az">A-Z</option>
+                <option value="za">Z-A</option>
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="largest">Largest First</option>
+                <option value="smallest">Smallest First</option>
+            </select>
+        </div>
+
+        <div id="mobileTreeContainer" class="tree-scroll-area">
+            <div style="text-align: center; color: #7f8c8d; margin-top: 20px;">Click "📂 Open" to load files for download.</div>
+        </div>
+
+        <div id="mobileBulkBar" class="bulkActionBar">
+            <div class="bulk-header">
+                <span id="mobileBulkCount" class="bulk-text">0 flagged</span>
+                <button class="collapse-btn" onclick="toggleBulkBar('mobileBulkBar')">🔽</button>
+            </div>
+            <div class="bulk-buttons">
+                <button class="btn-red" onclick="executeMobileBulk('encrypt')">Encrypt & Download</button>
+                <button class="btn-green" onclick="executeMobileBulk('decrypt')">Decrypt & Download</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const hasDesktopAPI = ('showDirectoryPicker' in window);
+    let mobileFilesMap = new Map(); 
+    let desktopFilesMap = new Map(); 
+    let currentObjectUrl = null; 
+
+    if (!hasDesktopAPI) {
+        document.getElementById('tabBtnDesktop').disabled = true;
+        document.getElementById('tabBtnDesktop').innerText = "Desktop (Unsupported)";
+        switchTab('mobile');
+    }
+
+    function switchTab(tabName) {
+        if (!hasDesktopAPI && tabName === 'desktop') return;
+        document.querySelectorAll('.tab-btn, .tab-content').forEach(el => el.classList.remove('active'));
+        document.getElementById(`tabBtn${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`).classList.add('active');
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+    }
+
+    function toggleVisibility(inputId, iconEl) {
+        const input = document.getElementById(inputId);
+        if (input.type === "password") { input.type = "text"; iconEl.style.opacity = "1"; } 
+        else { input.type = "password"; iconEl.style.opacity = "0.6"; }
+    }
+
+    // --- UI HELPERS ---
+    function formatBytes(bytes) {
+        if (!+bytes) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+    }
+
+    function showToast(text, type) {
+        const container = document.getElementById('toastContainer');
+        const toast = document.createElement('div');
+        toast.className = `toast msg-${type}`; toast.innerText = text; container.appendChild(toast);
+        setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = '0.4s'; setTimeout(() => toast.remove(), 400); }, 4000);
+    }
+    
+    function setBlocker(active, title = "Processing...", current = 0, total = 0) {
+        const blocker = document.getElementById('uiBlocker');
+        if (active) { blocker.classList.add('active'); document.getElementById('progressTitle').innerText = title; document.getElementById('progressBar').max = total; document.getElementById('progressBar').value = current; document.getElementById('progressText').innerText = `${current} / ${total}`; } 
+        else { blocker.classList.remove('active'); }
+    }
+
+    function openModal(elementHtml, objectUrl = null) {
+        if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+        currentObjectUrl = objectUrl;
+        document.getElementById('modalBody').innerHTML = elementHtml;
+        document.getElementById('previewModal').classList.add('active');
+    }
+    function closeModal() {
+        document.getElementById('previewModal').classList.remove('active');
+        document.getElementById('modalBody').innerHTML = "";
+        if (currentObjectUrl) { URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
+    }
+    function renderToModal(url, mimeType) {
+        if (mimeType.startsWith('image/')) openModal(`<img src="${url}">`, url);
+        else if (mimeType.startsWith('video/')) openModal(`<video controls autoplay src="${url}"></video>`, url);
+        else openModal(`<a href="${url}" target="_blank" class="btn-green" style="padding:15px; display:inline-block; text-decoration:none;">Open Extracted Document</a>`, url);
+    }
+    function toggleBulkBar(barId) {
+        const bar = document.getElementById(barId); bar.classList.toggle('collapsed');
+        bar.querySelector('.collapse-btn').innerHTML = bar.classList.contains('collapsed') ? '⚙️' : '🔽';
+    }
+
+    // --- CRYPTO ENGINE & FILENAMES ---
+    function bufferToBase64Url(buffer) {
+        const bytes = new Uint8Array(buffer); let bin = '';
+        for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+        return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+    function base64UrlToBuffer(b64url) {
+        let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+        while (b64.length % 4) b64 += '=';
+        const bin = atob(b64); const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return bytes.buffer;
+    }
+
+    async function getKeyMaterial(pwd) { return window.crypto.subtle.importKey("raw", new TextEncoder().encode(pwd), { name: "PBKDF2" }, false, ["deriveBits", "deriveKey"]); }
+    async function getKey(mat, salt) { return window.crypto.subtle.deriveKey({ name: "PBKDF2", salt: salt, iterations: 50000, hash: "SHA-1" }, mat, { name: "AES-CBC", length: 256 }, false, ["encrypt", "decrypt"]); }
+
+    async function encryptFilename(plainName, key) {
+        const nameIV = window.crypto.getRandomValues(new Uint8Array(16));
+        const encNameBuf = await window.crypto.subtle.encrypt({ name: "AES-CBC", iv: nameIV }, key, new TextEncoder().encode(plainName));
+        const payload = new Uint8Array(16 + encNameBuf.byteLength);
+        payload.set(nameIV, 0); payload.set(new Uint8Array(encNameBuf), 16);
+        return bufferToBase64Url(payload.buffer) + ".esafe";
+    }
+
+    async function decryptFilename(encFilename, key) {
+        try {
+            const payload = new Uint8Array(base64UrlToBuffer(encFilename.replace('.esafe', '')));
+            const decNameBuf = await window.crypto.subtle.decrypt({ name: "AES-CBC", iv: payload.slice(0, 16) }, key, payload.slice(16));
+            return new TextDecoder().decode(decNameBuf);
+        } catch(e) { return "Decrypted_File_" + Math.random().toString(36).substr(2,6); }
+    }
+
+    function checkPasswordsMatch(mode) {
+        const p1 = document.getElementById('password').value;
+        const p2 = document.getElementById('confirmPassword').value;
+        if (!p1) { showToast("Master Password required.", "error"); return false; }
+        if (mode === 'encrypt' && p1 !== p2) { showToast("Passwords do not match!", "error"); return false; }
+        return true;
+    }
+
+    // --- SEARCH & SORT LOGIC ---
+    function filterTree(query, mode) {
+        const container = document.getElementById(mode === 'desktop' ? 'desktopTreeContainer' : 'mobileTreeContainer');
+        const q = query.toLowerCase();
+        container.querySelectorAll('.file-row').forEach(row => {
+            if (row.querySelector('.file-name').innerText.toLowerCase().includes(q)) {
+                row.style.display = 'flex';
+                let parent = row.parentElement.closest('details');
+                while(parent) { parent.open = true; parent.style.display = 'block'; parent = parent.parentElement.closest('details'); }
+            } else { row.style.display = 'none'; }
+        });
+        const folders = container.querySelectorAll('details');
+        for (let i = folders.length - 1; i >= 0; i--) {
+            const f = folders[i];
+            if (f.querySelectorAll('.file-row[style="display: flex;"]').length === 0 && f.querySelectorAll('details[style="display: block;"]').length === 0 && q !== '') f.style.display = 'none';
+            else f.style.display = 'block';
+        }
+    }
+
+    function reRenderDesktopTree() {
+        const container = document.getElementById('desktopTreeContainer'); container.innerHTML = '';
+        container.appendChild(buildDesktopTreeHTML(window.desktopFileTree, "Workspace Root", "d_root"));
+        document.getElementById('desktopSearch').value = '';
+    }
+    
+    function reRenderMobileTree() {
+        const container = document.getElementById('mobileTreeContainer'); container.innerHTML = '';
+        container.appendChild(buildMobileTreeHTML(window.mobileFileTree, "Selected Folder", "m_root"));
+        document.getElementById('mobileSearch').value = '';
+    }
+
+    // ============================================================================
+    // === DESKTOP MODE ===
+    // ============================================================================
+    async function loadDesktopWorkspace() {
+        try {
+            const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+            desktopFilesMap.clear(); document.getElementById('desktopBulkBar').classList.remove('active'); 
+            
+            setBlocker(true, "Mapping Directory...", 0, 0);
+            const fileTree = {};
+            await mapDesktopDirectory(dirHandle, dirHandle, fileTree);
+            
+            window.desktopFileTree = fileTree; 
+            reRenderDesktopTree(); 
+            setBlocker(false);
+            showToast(`Workspace mapped. Discovered ${desktopFilesMap.size} files.`, 'info');
+        } catch (e) { setBlocker(false); console.error(e); showToast("Access denied or cancelled.", "info"); }
+    }
+
+    async function mapDesktopDirectory(dirHandle, parentHandle, treeNode) {
+        for await (const entry of dirHandle.values()) {
+            if (entry.kind === 'file') {
+                const id = 'dfile_' + Math.random().toString(36).substr(2, 9);
+                const file = await entry.getFile(); // Fetch metadata for sorting
+                desktopFilesMap.set(id, {
+                    handle: entry, parent: dirHandle, name: entry.name,
+                    isEnc: entry.name.endsWith('.safe') || entry.name.endsWith('.esafe'),
+                    size: file.size, lastModified: file.lastModified
+                });
+                treeNode[entry.name] = id;
+            } else if (entry.kind === 'directory') {
+                treeNode[entry.name] = {};
+                await mapDesktopDirectory(entry, dirHandle, treeNode[entry.name]);
+            }
+        }
+    }
+
+    function buildDesktopTreeHTML(node, folderName, pathId) {
+        const details = document.createElement('details'); details.open = true;
+        const stats = getFileStats(node, true);
+        const summary = document.createElement('summary');
+        summary.innerHTML = `<input type="checkbox" onchange="toggleDesktopFolderCB(this, '${pathId}')" onclick="event.stopPropagation()"> 📁 ${folderName} <span id="count_d_${pathId}" style="color:#7f8c8d; font-weight:normal; margin-left: 5px;">(📄 ${stats.plain} | 🔒 ${stats.enc})</span>`;
+        details.appendChild(summary);
+
+        const contentWrapper = document.createElement('div'); contentWrapper.id = `dfolder_${pathId}`;
+        const sortMode = document.getElementById('desktopSort') ? document.getElementById('desktopSort').value : 'az';
+        let fileKeys = [], folderKeys = [];
+        for (const key in node) { if (typeof node[key] === 'string') fileKeys.push(key); else folderKeys.push(key); }
+        
+        // Sorting Logic
+        fileKeys.sort((a,b) => {
+            const fA = desktopFilesMap.get(node[a]); const fB = desktopFilesMap.get(node[b]);
+            if (sortMode === 'az') return fA.name.localeCompare(fB.name);
+            if (sortMode === 'za') return fB.name.localeCompare(fA.name);
+            if (sortMode === 'newest') return fB.lastModified - fA.lastModified;
+            if (sortMode === 'oldest') return fA.lastModified - fB.lastModified;
+            if (sortMode === 'largest') return fB.size - fA.size;
+            if (sortMode === 'smallest') return fA.size - fB.size;
+        });
+        folderKeys.sort((a,b) => a.localeCompare(b)); // Folders always A-Z
+
+        for (const key of fileKeys) {
+            const id = node[key]; const fileData = desktopFilesMap.get(id);
+            const row = document.createElement('div');
+            row.className = `file-row ${fileData.isEnc ? 'enc-row' : ''}`; row.id = `row_${id}`;
+            row.onclick = () => autoProcessDesktopRowClick(id);
+            
+            let displayName = fileData.name;
+            if (fileData.name.endsWith('.esafe') && fileData.name.length > 25) displayName = fileData.name.substring(0, 15) + "...esafe";
+
+            row.innerHTML = `<input type="checkbox" class="dfile-cb cb-${pathId}" value="${id}" onchange="updateDesktopBulkUI()" onclick="event.stopPropagation()">
+                             <div class="file-clickable-zone">
+                                <span class="file-name" id="name_${id}" title="${fileData.name}">${fileData.isEnc ? '🔒' : '📄'} ${displayName}</span>
+                                <span class="file-size">${formatBytes(fileData.size)}</span>
+                             </div>`;
+            contentWrapper.appendChild(row);
+        }
+        for (const key of folderKeys) contentWrapper.appendChild(buildDesktopTreeHTML(node[key], key, pathId + "_" + key.replace(/[^a-zA-Z0-9]/g, '')));
+        details.appendChild(contentWrapper); return details;
+    }
+
+    function toggleDesktopFolderCB(checkbox, pathId) { document.querySelectorAll(`#dfolder_${pathId} .dfile-cb`).forEach(cb => cb.checked = checkbox.checked); updateDesktopBulkUI(); }
+    function updateDesktopBulkUI() {
+        const checked = document.querySelectorAll('.dfile-cb:checked').length;
+        const bar = document.getElementById('desktopBulkBar');
+        if (checked > 0) { bar.classList.add('active'); document.getElementById('desktopBulkCount').innerText = `${checked} items selected`; } 
+        else { bar.classList.remove('active'); }
+    }
+
+    async function autoProcessDesktopRowClick(id) {
+        const fData = desktopFilesMap.get(id); const file = await fData.handle.getFile();
+        if (!fData.isEnc) { renderToModal(URL.createObjectURL(file), getMimeType(file.name)); } 
+        else {
+            if (!checkPasswordsMatch('decrypt')) return;
+            setBlocker(true, "Decrypting into RAM...", 0, 1);
+            try {
+                const buf = await file.arrayBuffer(); const view = new Uint8Array(buf);
+                const key = await getKey(await getKeyMaterial(document.getElementById('password').value), view.slice(0, 16));
+                const dec = await window.crypto.subtle.decrypt({ name: "AES-CBC", iv: view.slice(16, 32) }, key, view.slice(32));
+                
+                let origName = file.name.endsWith('.esafe') ? await decryptFilename(file.name, key) : file.name.replace('.safe', '');
+                const mime = getMimeType(origName); renderToModal(URL.createObjectURL(new Blob([dec], { type: mime })), mime);
+                showToast("Decrypted into isolated memory.", "success");
+            } catch (e) { console.error(e); showToast("Authentication failure or corrupted data.", "error"); }
+            setBlocker(false);
+        }
+    }
+
+    async function executeDesktopBulk(mode) {
+        if (!checkPasswordsMatch(mode)) return;
+        const doEncName = document.getElementById('cbEncryptName').checked;
+        const checkboxes = document.querySelectorAll('.dfile-cb:checked');
+        if (checkboxes.length === 0) return;
+
+        setBlocker(true, `In-Place ${mode === 'encrypt' ? 'Encryption' : 'Decryption'}...`, 0, checkboxes.length);
+        let completed = 0, failed = 0;
+        const mat = await getKeyMaterial(document.getElementById('password').value);
+
+        for (let i = 0; i < checkboxes.length; i++) {
+            const id = checkboxes[i].value; const fData = desktopFilesMap.get(id);
+            if ((mode === 'encrypt' && fData.isEnc) || (mode === 'decrypt' && !fData.isEnc)) { document.getElementById('progressBar').value = i + 1; continue; }
+
+            try {
+                const file = await fData.handle.getFile(); const buf = await file.arrayBuffer();
+                let outData, newName;
+
+                if (mode === 'encrypt') {
+                    const salt = window.crypto.getRandomValues(new Uint8Array(16)); const iv = window.crypto.getRandomValues(new Uint8Array(16));
+                    const key = await getKey(mat, salt);
+                    const enc = await window.crypto.subtle.encrypt({ name: "AES-CBC", iv: iv }, key, buf);
+                    outData = new Uint8Array(32 + enc.byteLength);
+                    outData.set(salt, 0); outData.set(iv, 16); outData.set(new Uint8Array(enc), 32);
+                    newName = doEncName ? await encryptFilename(file.name, key) : file.name + ".safe";
+                } else {
+                    const view = new Uint8Array(buf);
+                    const key = await getKey(mat, view.slice(0, 16));
+                    outData = await window.crypto.subtle.decrypt({ name: "AES-CBC", iv: view.slice(16, 32) }, key, view.slice(32));
+                    newName = file.name.endsWith('.esafe') ? await decryptFilename(file.name, key) : file.name.replace('.safe', '');
+                }
+
+                const newHandle = await fData.parent.getFileHandle(newName, { create: true });
+                const writable = await newHandle.createWritable(); await writable.write(outData); await writable.close();
+                await fData.parent.removeEntry(fData.handle.name);
+                
+                fData.handle = newHandle; fData.name = newName; fData.isEnc = mode === 'encrypt';
+                fData.size = outData.byteLength; fData.lastModified = Date.now();
+                desktopFilesMap.set(id, fData); 
+                
+                completed++;
+            } catch (e) { console.error(`Fault on [${fData.name}]:`, e); failed++; }
+            document.getElementById('progressBar').value = i + 1; document.getElementById('progressText').innerText = `${i+1} / ${checkboxes.length}`;
+        }
+        setBlocker(false); checkboxes.forEach(cb => cb.checked = false); updateDesktopBulkUI();
+        reRenderDesktopTree(); // Re-render to sort new sizes/dates correctly
+        if (failed > 0) showToast(`Finished with ${failed} failures.`, "error");
+        else showToast(`Successfully modified ${completed} files in place.`, "success");
+    }
+
+    // ============================================================================
+    // === MOBILE MODE ===
+    // ============================================================================
+    document.getElementById('batchFileInput').addEventListener('change', function(e) {
+        const files = Array.from(e.target.files);
+        mobileFilesMap.clear(); document.getElementById('mobileBulkBar').classList.remove('active'); 
+        if (files.length === 0) { document.getElementById('mobileTreeContainer').innerHTML = ''; return; }
+
+        const fileTree = {};
+        files.forEach((file, i) => {
+            const id = 'mfile_' + i; mobileFilesMap.set(id, file);
+            const pathParts = (file.webkitRelativePath || file.name).split('/');
+            let current = fileTree;
+            for (let j = 0; j < pathParts.length - 1; j++) {
+                if (!current[pathParts[j]]) current[pathParts[j]] = {};
+                current = current[pathParts[j]];
+            }
+            current[pathParts[pathParts.length - 1]] = id; 
+        });
+
+        window.mobileFileTree = fileTree; reRenderMobileTree();
+        showToast(`Loaded ${files.length} files.`, 'info');
+    });
+
+    function getFileStats(node, isDesktop) {
+        let stats = { plain: 0, enc: 0 };
+        if (typeof node === 'string') {
+            const name = isDesktop ? desktopFilesMap.get(node).name : mobileFilesMap.get(node).name;
+            if (name.endsWith('.safe') || name.endsWith('.esafe')) stats.enc = 1; else stats.plain = 1; return stats;
+        }
+        for (let k in node) { let c = getFileStats(node[k], isDesktop); stats.plain += c.plain; stats.enc += c.enc; }
+        return stats;
+    }
+
+    function buildMobileTreeHTML(node, folderName, pathId) {
+        const details = document.createElement('details'); details.open = true;
+        const stats = getFileStats(node, false);
+        const summary = document.createElement('summary');
+        summary.innerHTML = `<input type="checkbox" onchange="toggleMobileFolderCB(this, '${pathId}')" onclick="event.stopPropagation()"> 📁 ${folderName} <span id="count_m_${pathId}" style="color:#7f8c8d; font-weight:normal; margin-left: 5px;">(📄 ${stats.plain} | 🔒 ${stats.enc})</span>`;
+        details.appendChild(summary);
+
+        const contentWrapper = document.createElement('div'); contentWrapper.id = `mfolder_${pathId}`;
+        const sortMode = document.getElementById('mobileSort') ? document.getElementById('mobileSort').value : 'az';
+        let fileKeys = [], folderKeys = [];
+        for (const key in node) { if (typeof node[key] === 'string') fileKeys.push(key); else folderKeys.push(key); }
+        
+        fileKeys.sort((a,b) => {
+            const fA = mobileFilesMap.get(node[a]); const fB = mobileFilesMap.get(node[b]);
+            if (sortMode === 'az') return fA.name.localeCompare(fB.name);
+            if (sortMode === 'za') return fB.name.localeCompare(fA.name);
+            if (sortMode === 'newest') return fB.lastModified - fA.lastModified;
+            if (sortMode === 'oldest') return fA.lastModified - fB.lastModified;
+            if (sortMode === 'largest') return fB.size - fA.size;
+            if (sortMode === 'smallest') return fA.size - fB.size;
+        });
+        folderKeys.sort((a,b) => a.localeCompare(b));
+
+        for (const key of fileKeys) {
+            const id = node[key]; const file = mobileFilesMap.get(id);
+            const isEnc = file.name.endsWith('.safe') || file.name.endsWith('.esafe');
+            const row = document.createElement('div');
+            row.className = `file-row ${isEnc ? 'enc-row' : ''}`; row.onclick = () => autoProcessMobileRowClick(id, isEnc);
+            
+            let displayName = file.name;
+            if (file.name.endsWith('.esafe') && file.name.length > 25) displayName = file.name.substring(0, 15) + "...esafe";
+
+            row.innerHTML = `<input type="checkbox" class="mfile-cb cb-${pathId}" value="${id}" onchange="updateMobileBulkUI()" onclick="event.stopPropagation()">
+                             <div class="file-clickable-zone">
+                                <span class="file-name" title="${file.name}">${isEnc ? '🔒' : '📄'} ${displayName}</span>
+                                <span class="file-size">${formatBytes(file.size)}</span>
+                             </div>`;
+            contentWrapper.appendChild(row);
+        }
+        for (const key of folderKeys) contentWrapper.appendChild(buildMobileTreeHTML(node[key], key, pathId + "_" + key.replace(/[^a-zA-Z0-9]/g, '')));
+        details.appendChild(contentWrapper); return details;
+    }
+
+    function toggleMobileFolderCB(checkbox, pathId) { document.querySelectorAll(`#mfolder_${pathId} .mfile-cb`).forEach(cb => cb.checked = checkbox.checked); updateMobileBulkUI(); }
+    function updateMobileBulkUI() {
+        const checked = document.querySelectorAll('.mfile-cb:checked').length;
+        const bar = document.getElementById('mobileBulkBar');
+        if (checked > 0) { bar.classList.add('active'); document.getElementById('mobileBulkCount').innerText = `${checked} items selected`; } 
+        else { bar.classList.remove('active'); }
+    }
+
+    async function autoProcessMobileRowClick(fileId, isEncrypted) {
+        const file = mobileFilesMap.get(fileId);
+        if (!isEncrypted) { renderToModal(URL.createObjectURL(file), getMimeType(file.name)); } 
+        else {
+            if (!checkPasswordsMatch('decrypt')) return;
+            setBlocker(true, "Decrypting...", 0, 1);
+            try {
+                const buf = await file.arrayBuffer(); const view = new Uint8Array(buf);
+                const key = await getKey(await getKeyMaterial(document.getElementById('password').value), view.slice(0, 16));
+                const dec = await window.crypto.subtle.decrypt({ name: "AES-CBC", iv: view.slice(16, 32) }, key, view.slice(32));
+                
+                let origName = file.name.endsWith('.esafe') ? await decryptFilename(file.name, key) : file.name.replace('.safe', '');
+                const mime = getMimeType(origName); renderToModal(URL.createObjectURL(new Blob([dec], { type: mime })), mime);
+                showToast("File decoded in RAM.", "success");
+            } catch (e) { console.error(e); showToast("Authentication failure.", "error"); }
+            setBlocker(false);
+        }
+    }
+
+    async function executeMobileBulk(mode) {
+        if (!checkPasswordsMatch(mode)) return;
+        const doEncName = document.getElementById('cbEncryptName').checked;
+        const checkboxes = document.querySelectorAll('.mfile-cb:checked');
+        if (checkboxes.length === 0) return;
+
+        setBlocker(true, `Generating ${mode === 'encrypt' ? 'Encrypted' : 'Decrypted'} Downloads...`, 0, checkboxes.length);
+        let completed = 0, failed = 0;
+        const mat = await getKeyMaterial(document.getElementById('password').value);
+
+        for (let i = 0; i < checkboxes.length; i++) {
+            const fileId = checkboxes[i].value; const file = mobileFilesMap.get(fileId);
+            const isEnc = file.name.endsWith('.safe') || file.name.endsWith('.esafe');
+            if ((mode === 'encrypt' && isEnc) || (mode === 'decrypt' && !isEnc)) { document.getElementById('progressBar').value = i + 1; continue; }
+
+            try {
+                const buf = await file.arrayBuffer();
+                if (mode === 'encrypt') {
+                    const salt = window.crypto.getRandomValues(new Uint8Array(16)); const iv = window.crypto.getRandomValues(new Uint8Array(16));
+                    const key = await getKey(mat, salt);
+                    const enc = await window.crypto.subtle.encrypt({ name: "AES-CBC", iv: iv }, key, buf);
+                    const pack = new Uint8Array(32 + enc.byteLength);
+                    pack.set(salt, 0); pack.set(iv, 16); pack.set(new Uint8Array(enc), 32);
+                    
+                    let newName = doEncName ? await encryptFilename(file.name, key) : file.name + ".safe";
+                    triggerDownload(new Blob([pack]), newName);
+                } else {
+                    const view = new Uint8Array(buf);
+                    const key = await getKey(mat, view.slice(0, 16));
+                    const dec = await window.crypto.subtle.decrypt({ name: "AES-CBC", iv: view.slice(16, 32) }, key, view.slice(32));
+                    
+                    let newName = file.name.endsWith('.esafe') ? await decryptFilename(file.name, key) : file.name.replace('.safe', '');
+                    triggerDownload(new Blob([dec]), newName);
+                }
+                completed++; await new Promise(r => setTimeout(r, 450)); 
+            } catch (e) { console.error(`Export failure:`, e); failed++; }
+            document.getElementById('progressBar').value = i + 1; document.getElementById('progressText').innerText = `${i+1} / ${checkboxes.length}`;
+        }
+        
+        setBlocker(false); checkboxes.forEach(cb => cb.checked = false); updateMobileBulkUI();
+        if (failed > 0) showToast(`Finished with ${failed} failures.`, "error");
+        else showToast(`Successfully exported ${completed} files.`, "success");
+    }
+
+    function triggerDownload(blob, name) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = name; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000); 
+    }
+    
+    function getMimeType(name) {
+        const ext = name.split('.').pop().toLowerCase();
+        if (['jpg','jpeg','png','gif','webp'].includes(ext)) return `image/${ext}`;
+        if (['mp4','webm','ogg'].includes(ext)) return `video/${ext}`;
+        if (['pdf'].includes(ext)) return 'application/pdf';
+        return 'application/octet-stream';
+    }
+</script>
+</body>
+</html>
